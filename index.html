@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>My Digital Books</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;font-family:Arial,sans-serif;background:#f4f1ea;color:#222}
+body{overflow:hidden}.app{height:100vh;display:flex;flex-direction:column}
+header{height:64px;display:flex;align-items:center;gap:14px;padding:0 18px;background:#fff;border-bottom:1px solid #ddd;flex-shrink:0}
+.logo{font-weight:700;font-size:20px;white-space:nowrap}.spacer{flex:1}
+button,input,select{font:inherit}button{border:0;border-radius:8px;padding:9px 13px;background:#222;color:#fff;cursor:pointer}button:hover{opacity:.88}
+.secondary{background:#eee;color:#222}.danger{background:#a33}
+main{flex:1;min-height:0;overflow:auto}.library{padding:28px;max-width:1250px;margin:auto}
+.hero{background:#fff;border-radius:18px;padding:28px;margin-bottom:24px;box-shadow:0 3px 18px #0000000d}
+.hero h1{margin:0 0 8px;font-size:30px}.hero p{margin:0;color:#666}
+.tools{display:flex;gap:10px;margin:20px 0;flex-wrap:wrap}.tools input,.tools select{padding:10px 12px;border:1px solid #ccc;border-radius:8px;background:#fff}
+.tools input{min-width:240px;flex:1}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:20px}
+.card{background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 3px 16px #00000010;cursor:pointer;transition:.18s}.card:hover{transform:translateY(-3px)}
+.cover{height:260px;background:linear-gradient(135deg,#e7dfd0,#fff);display:flex;align-items:center;justify-content:center;padding:20px;text-align:center;font-size:23px;font-weight:700}
+.cardbody{padding:15px}.cardbody h3{margin:0 0 6px;font-size:17px}.meta{color:#777;font-size:13px}
+.empty{text-align:center;padding:50px;color:#777;background:#fff;border-radius:14px}
+.reader{position:fixed;inset:0;background:#202020;z-index:20;display:none;flex-direction:column}.reader.show{display:flex}
+.rtop{height:58px;background:#111;color:#fff;display:flex;align-items:center;gap:9px;padding:0 12px;flex-shrink:0}.rtitle{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:45vw}
+.stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;position:relative;padding:18px 65px;overflow:hidden}
+.book{position:relative;width:min(92vw,1000px);height:min(84vh,760px);perspective:2200px;display:flex;align-items:center;justify-content:center}
+.page{position:absolute;background:#fff;box-shadow:0 10px 35px #0008;overflow:hidden;backface-visibility:hidden;transition:transform .55s ease;transform-origin:left center}
+.page.rtl{transform-origin:right center}.page canvas{display:block;width:100%;height:100%}
+.turn-next{transform:rotateY(-180deg)}.turn-prev{transform:rotateY(180deg)}
+.arrow{position:absolute;top:50%;transform:translateY(-50%);width:48px;height:64px;border-radius:10px;background:#fff;color:#111;font-size:28px;padding:0;z-index:4}.left{left:12px}.right{right:12px}
+.controls{height:62px;background:#111;color:#fff;display:flex;align-items:center;gap:9px;padding:8px 14px;flex-shrink:0}.controls input[type=range]{flex:1}.pageinfo{min-width:95px;text-align:center}
+.progress{font-size:12px;color:#bbb;min-width:80px;text-align:right}
+.help{font-size:12px;color:#aaa;margin-left:auto}
+#fileInput{display:none}
+.toast{position:fixed;bottom:25px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:10px 15px;border-radius:8px;display:none;z-index:100}
+@media(max-width:650px){header{height:56px}.logo{font-size:17px}.library{padding:16px}.hero{padding:20px}.hero h1{font-size:24px}.stage{padding:10px 42px}.book{width:95vw;height:78vh}.arrow{width:38px;height:52px}.help{display:none}.rtitle{max-width:35vw}.cover{height:220px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="logo">📚 My Digital Books</div><div class="spacer"></div>
+  <button class="secondary" onclick="document.getElementById('fileInput').click()">＋ Add PDF</button>
+  <input id="fileInput" type="file" accept="application/pdf" multiple>
+</header>
+<main><section class="library">
+  <div class="hero"><h1>Digital Library</h1><p>Upload PDFs from your computer, or add permanent books through the <b>BOOKS</b> section in the code below.</p></div>
+  <div class="tools"><input id="search" placeholder="Search books…"><select id="lang"><option value="">All languages</option><option value="ur">Urdu</option><option value="en">English</option></select></div>
+  <div id="grid" class="grid"></div>
+</section></main>
+</div>
+
+<div id="reader" class="reader">
+  <div class="rtop"><button class="secondary" onclick="closeReader()">← Library</button><div id="rtitle" class="rtitle"></div><div class="spacer"></div><button class="secondary" onclick="zoom(-.1)">−</button><button class="secondary" onclick="zoom(.1)">＋</button><button class="secondary" onclick="fullscreen()">⛶</button><button onclick="downloadPDF()">Download</button></div>
+  <div class="stage">
+    <button class="arrow left" onclick="prevPage()">‹</button>
+    <div id="book" class="book"></div>
+    <button class="arrow right" onclick="nextPage()">›</button>
+  </div>
+  <div class="controls">
+    <button class="secondary" onclick="prevPage()">Previous</button>
+    <input id="slider" type="range" min="1" value="1">
+    <div id="pageinfo" class="pageinfo">1 / 1</div>
+    <button class="secondary" onclick="nextPage()">Next</button>
+    <div id="progress" class="progress"></div><div class="help">← → / Space</div>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs" type="module"></script>
+<script>
+let pdfjsLib;
+(async()=>{pdfjsLib=await import("https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs");pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs";init()})();
+
+const BOOKS = [
+  /* Add permanent books here. Example:
+  {title:"My Urdu Book",author:"Author",language:"ur",url:"books/my-urdu-book.pdf"},
+  {title:"My English Book",author:"Author",language:"en",url:"books/my-english-book.pdf"}
+  */
+];
+
+let books=[...BOOKS], current=null, currentPDF=null, page=1, scale=1, rendering=false, blobUrls=[];
+
+const $=id=>document.getElementById(id);
+function init(){renderLibrary();$("search").oninput=renderLibrary;$("lang").onchange=renderLibrary;$("fileInput").onchange=e=>[...e.target.files].forEach(f=>{let u=URL.createObjectURL(f);blobUrls.push(u);books.push({title:f.name.replace(/\.pdf$/i,""),author:"Local PDF",language:"",url:u});renderLibrary()})}
+function renderLibrary(){
+ let q=$("search").value.toLowerCase(), l=$("lang").value;
+ let list=books.filter(b=>(!l||b.language===l)&&(!q||((b.title||"")+" "+(b.author||"")).toLowerCase().includes(q)));
+ $("grid").innerHTML=list.length?list.map((b,i)=>`<article class="card" onclick="openBook(${books.indexOf(b)})"><div class="cover">${escapeHtml(b.title||"Untitled")}</div><div class="cardbody"><h3>${escapeHtml(b.title||"Untitled")}</h3><div class="meta">${escapeHtml(b.author||"")} ${b.language?("· "+(b.language==="ur"?"Urdu":"English")):""}</div></div></article>`).join(""):`<div class="empty">No books found.<br><br>Use <b>Add PDF</b> to open a PDF, or add books to the <b>BOOKS</b> list in this file.</div>`;
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+async function openBook(i){
+ current=books[i];$("reader").classList.add("show");$("rtitle").textContent=current.title||"PDF";document.documentElement.style.overflow="hidden";
+ try{currentPDF=await pdfjsLib.getDocument(current.url).promise;page=1;scale=1;await drawPage()}catch(e){toast("Could not open this PDF. If it is an external URL, the server must allow CORS.");console.error(e)}
+}
+function closeReader(){$("reader").classList.remove("show");currentPDF=null; $("book").innerHTML=""}
+async function drawPage(){
+ if(!currentPDF||rendering)return;rendering=true;
+ page=Math.max(1,Math.min(page,currentPDF.numPages));$("slider").max=currentPDF.numPages;$("slider").value=page;$("pageinfo").textContent=page+" / "+currentPDF.numPages;$("progress").textContent=Math.round(page/currentPDF.numPages*100)+"%";
+ let p=await currentPDF.getPage(page), vp=p.getViewport({scale:1});
+ let maxW=Math.min(window.innerWidth*.78,1000), maxH=Math.min(window.innerHeight*.78,760);
+ let s=Math.min(maxW/vp.width,maxH/vp.height)*scale;
+ vp=p.getViewport({scale:s});
+ let canvas=document.createElement("canvas"),ctx=canvas.getContext("2d");canvas.width=vp.width;canvas.height=vp.height;
+ let div=document.createElement("div");div.className="page"+(current.language==="ur"?" rtl":"");div.style.width=vp.width+"px";div.style.height=vp.height+"px";div.style.left="50%";div.style.top="50%";div.style.transform=`translate(-50%,-50%)`;
+ div.appendChild(canvas);$("book").innerHTML="";$("book").appendChild(div);await p.render({canvasContext:ctx,viewport:vp}).promise;rendering=false;
+}
+function nextPage(){if(currentPDF&&page<currentPDF.numPages){page++;drawPage()}}
+function prevPage(){if(currentPDF&&page>1){page--;drawPage()}}
+$("slider").oninput=e=>{page=+e.target.value;drawPage()}
+function zoom(v){scale=Math.max(.5,Math.min(2.5,scale+v));drawPage()}
+function downloadPDF(){if(current&&current.url){let a=document.createElement("a");a.href=current.url;a.download=(current.title||"book")+".pdf";a.target="_blank";a.click()}}
+function fullscreen(){let e=$("reader");if(!document.fullscreenElement)e.requestFullscreen?.();else document.exitFullscreen?.()}
+function toast(t){$("toast").textContent=t;$("toast").style.display="block";setTimeout(()=>$("toast").style.display="none",3000)}
+window.addEventListener("resize",()=>{if(currentPDF)drawPage()});
+document.addEventListener("keydown",e=>{if(!$("reader").classList.contains("show"))return;if(e.key==="ArrowRight"||e.key===" ")current?.language==="ur"?prevPage():nextPage();if(e.key==="ArrowLeft")current?.language==="ur"?nextPage():prevPage();if(e.key==="Escape")closeReader()});
+</script>
+</body>
+</html>
